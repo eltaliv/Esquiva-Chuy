@@ -1,235 +1,288 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>Esquiva Chuy</title>
+
 <style>
     body {
         margin: 0;
-        background: #8ec6ff;
+        background: #87BFFF; 
         font-family: Arial, sans-serif;
+        user-select: none;
         text-align: center;
     }
 
     h1 {
-        margin-top: 20px;
-        font-size: 40px;
-        font-weight: bold;
+        margin-top: 15px;
     }
 
-    #gameBox {
+    #gameWrapper {
+        margin: auto;
+        margin-top: 20px;
         width: 900px;
-        height: 350px;
-        background: linear-gradient(white 60%, #e8c68a 60%);
-        margin: 20px auto;
+        height: 500px;
+        background: white;
         border: 4px solid black;
         border-radius: 10px;
         position: relative;
-        overflow: hidden;
     }
 
-    #chuy {
+    canvas {
+        display: block;
+        background: linear-gradient(white 60%, #e8c183 60%);
+        margin: auto;
+    }
+
+    #controls {
         position: absolute;
-        bottom: 60px;
-        width: 70px;
-        transition: 0.1s;
-    }
-
-    /* Agachado */
-    .crouch {
-        transform: translateY(-25px) scaleY(0.6);
-    }
-
-    /* Cactus nuevo minimalista */
-    .cactus {
-        position: absolute;
-        bottom: 60px;
-        width: 35px;
-        height: 60px;
-        background: #1d8f34;
-        border-radius: 6px;
-    }
-
-    #score {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        font-size: 20px;
-        font-weight: bold;
-    }
-
-    #deadMsg {
-        position: absolute;
-        top: 90px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 20px;
-        font-size: 25px;
-        border-radius: 10px;
-        background: white;
-        color: red;
-        display: none;
-        border: 3px solid red;
-    }
-
-    /* Controles abajo IZQUIERDA DE LA PÁGINA */
-    #controles {
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
+        left: 15px;
+        bottom: 15px;
         font-size: 18px;
+        background: rgba(0,0,0,0.1);
+        padding: 6px 10px;
+        border-radius: 8px;
+    }
+
+    #skinBtn {
+        margin-top: 20px;
+        padding: 12px 25px;
+        border-radius: 12px;
+        font-size: 22px;
+        cursor: pointer;
         background: white;
-        padding: 10px 15px;
-        border-radius: 10px;
         border: 2px solid black;
     }
 
-    /* Selector de skins */
-    #skinBtn {
-        margin-top: 15px;
+    #restartBtn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
         font-size: 20px;
-        padding: 10px 20px;
+        background: black;
+        color: white;
         border-radius: 10px;
         cursor: pointer;
-        border: 2px solid black;
-        background: white;
+        display: none;
     }
 
+    #deadBox {
+        position: absolute;
+        top: 150px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        padding: 20px 35px;
+        border: 3px solid red;
+        font-size: 28px;
+        color: red;
+        display: none;
+        border-radius: 15px;
+    }
 </style>
 </head>
+
 <body>
 
 <h1>Esquiva Chuy</h1>
 
-<div id="gameBox">
-    <div id="score">Puntaje: 0</div>
+<div id="gameWrapper">
 
-    <img id="chuy" src="chuy.png">
+    <canvas id="game" width="900" height="450"></canvas>
 
-    <div id="deadMsg">Estas muerto presiona R para reiniciar</div>
+    <div id="controls">
+        Espacio = saltar · B = agacharse · R = reiniciar
+    </div>
+
+    <button id="restartBtn">Reiniciar</button>
+    <div id="deadBox">¡Estas muerto! Presiona R</div>
+
 </div>
 
 <button id="skinBtn">Chuy (click para cambiar)</button>
 
-<!-- Controles fuera del gameplay -->
-<div id="controles">
-    Espacio = saltar<br>
-    B = agacharse<br>
-    R = reiniciar
-</div>
-
 <script>
-let gameBox = document.getElementById("gameBox");
-let chuy = document.getElementById("chuy");
-let scoreTxt = document.getElementById("score");
-let deadMsg = document.getElementById("deadMsg");
-let skinBtn = document.getElementById("skinBtn");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-let currentSkin = "chuy";
+// ===== Skins =====
 let skins = ["chuy", "mangonio"];
-let skinIndex = 0;
+let index = 0;
 
-let jumping = false;
-let yVel = 0;
-let gravity = 1.1;
-let isDead = false;
-let score = 0;
+let playerImg = new Image();
+playerImg.src = skins[0] + ".png";
 
-/* Cambiar skins */
-skinBtn.onclick = () => {
-    skinIndex = (skinIndex + 1) % skins.length;
-    currentSkin = skins[skinIndex];
-    skinBtn.innerText = currentSkin + " (click para cambiar)";
-    chuy.src = currentSkin + ".png";
+let deathImg = new Image();
+deathImg.src = skins[0] + "1.png";
+
+let currentSkin = skins[0];
+
+// ===== Player =====
+let player = {
+    x: 120,
+    y: 300,
+    width: 70,
+    height: 80,
+    dy: 0,
+    onGround: true,
+    speed: 10,
+    ducking: false
 };
 
-/* Crear cactus */
-function spawnCactus() {
-    if (isDead) return;
+let gravity = 0.7;
 
-    let c = document.createElement("div");
-    c.classList.add("cactus");
-    c.style.left = "900px";
-    gameBox.appendChild(c);
+// ===== Cactus =====
+let cactusList = [];
+let cactusEnabled = true;
 
-    let speed = 6; // Velocidad rápida
-    let move = setInterval(() => {
-        if (isDead) { clearInterval(move); c.remove(); }
+// minimalista
+function drawCactus(c) {
+    ctx.fillStyle = "#1ea132";
+    ctx.fillRect(c.x, c.y, c.width, c.height);
 
-        let x = parseInt(c.style.left);
-        c.style.left = (x - speed) + "px";
-
-        // Colisión
-        if (x < 120 && x > 50) {
-            if (!chuy.classList.contains("crouch") || parseInt(chuy.style.bottom) > 90) {
-                die();
-            }
-        }
-
-        if (x < -50) {
-            c.remove();
-        }
-    }, 20);
-
-    setTimeout(spawnCactus, 900 + Math.random() * 600);
+    ctx.fillRect(c.x - 15, c.y + 25, 15, 35);
+    ctx.fillRect(c.x + 40, c.y + 10, 15, 45);
 }
 
-spawnCactus();
+function spawnCactus() {
+    if (!cactusEnabled) return;
 
-/* Game loop */
-setInterval(() => {
-    if (!isDead) {
-        score += 1; // Puntaje más rápido
-        scoreTxt.innerText = "Puntaje: " + score;
-    }
+    cactusList.push({
+        x: 900,
+        y: 320,
+        width: 40,
+        height: 80
+    });
 
-    if (jumping) {
-        let bottom = parseInt(chuy.style.bottom || 60);
-        bottom += yVel;
-        yVel -= gravity;
+    setTimeout(spawnCactus, 700 + Math.random()*800);
+}
 
-        if (bottom <= 60) {
-            bottom = 60;
-            jumping = false;
-        }
-
-        chuy.style.bottom = bottom + "px";
-    }
-
-}, 30);
-
-/* SALTAR */
+// ===== Input =====
 document.addEventListener("keydown", e => {
-    if (e.code === "Space" && !jumping && !isDead) {
-        jumping = true;
-        yVel = 16;
-    }
-
-    if (e.key === "b" && !isDead) {
-        chuy.classList.add("crouch");
-    }
-
-    if (e.key === "r") resetGame();
+    if (e.key === " " || e.key === "ArrowUp") jump();
+    if (e.key.toLowerCase() === "b") duck(true);
+    if (e.key.toLowerCase() === "r") resetGame();
 });
 
 document.addEventListener("keyup", e => {
-    if (e.key === "b") chuy.classList.remove("crouch");
+    if (e.key.toLowerCase() === "b") duck(false);
 });
 
-/* MORIR */
-function die() {
-    isDead = true;
-    deadMsg.style.display = "block";
-    chuy.src = currentSkin + "1.png";
+// ===== Jump =====
+function jump() {
+    if (!player.onGround) return;
+
+    player.dy = -15;
+    player.onGround = false;
 }
 
-/* REINICIAR */
-function resetGame() {
-    isDead = false;
-    score = 0;
-    deadMsg.style.display = "none";
-    chuy.src = currentSkin + ".png";
+// ===== Duck =====
+function duck(state) {
+    if (state) {
+        player.height = 50;
+    } else {
+        player.height = 80;
+    }
 }
+
+// ===== Collision =====
+function hit(a, b) {
+    return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y + (a.height - 20) > b.y &&
+        a.y < b.y + b.height
+    );
+}
+
+// ===== Game Loop =====
+let score = 0;
+let dead = false;
+
+function loop() {
+    ctx.clearRect(0,0,900,450);
+
+    // move player
+    player.y += player.dy;
+    player.dy += gravity;
+
+    if (player.y > 300) {
+        player.y = 300;
+        player.dy = 0;
+        player.onGround = true;
+    }
+
+    ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
+
+    // cactus
+    cactusList.forEach(c => {
+        c.x -= player.speed;
+
+        drawCactus(c);
+
+        if (hit(player, c)) die();
+    });
+
+    cactusList = cactusList.filter(c => c.x > -60);
+
+    if (!dead) score += 2;
+
+    ctx.font = "28px Arial";
+    ctx.fillStyle = "black";
+    ctx.fillText("Puntaje: " + score, 20, 40);
+
+    requestAnimationFrame(loop);
+}
+
+// ===== Death =====
+function die() {
+    dead = true;
+    cactusEnabled = false;
+    playerImg = deathImg;
+
+    document.getElementById("deadBox").style.display = "block";
+    document.getElementById("restartBtn").style.display = "block";
+}
+
+// ===== Reset =====
+function resetGame() {
+    cactusList = [];
+    cactusEnabled = true;
+    dead = false;
+
+    score = 0;
+
+    player.y = 300;
+    player.dy = 0;
+    playerImg = new Image();
+    playerImg.src = currentSkin + ".png";
+
+    document.getElementById("deadBox").style.display = "none";
+    document.getElementById("restartBtn").style.display = "none";
+
+    spawnCactus();
+}
+
+// restart button
+document.getElementById("restartBtn").onclick = resetGame;
+
+// ===== Skin Selector =====
+document.getElementById("skinBtn").onclick = () => {
+    index = (index + 1) % skins.length;
+
+    currentSkin = skins[index];
+    playerImg.src = currentSkin + ".png";
+    deathImg.src = currentSkin + "1.png";
+
+    document.getElementById("skinBtn").textContent =
+        currentSkin.charAt(0).toUpperCase() + currentSkin.slice(1) +
+        " (click para cambiar)";
+};
+
+// ===== Start Game =====
+spawnCactus();
+loop();
 </script>
 
 </body>
