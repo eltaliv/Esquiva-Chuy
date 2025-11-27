@@ -16,7 +16,7 @@
     #gameContainer {
         width: 800px;
         height: 300px;
-        background: white; /* cielo blanco */
+        background: white;
         margin: 30px auto 0 auto;
         border: 3px solid black;
         position: relative;
@@ -28,7 +28,7 @@
         bottom: 0;
         width: 100%;
         height: 60px;
-        background: #e4c28b; /* arena */
+        background: #e4c28b;
     }
 
     #personaje {
@@ -61,6 +61,7 @@
         bottom: 5px;
         left: 5px;
         font-size: 14px;
+        font-weight: bold;
     }
 
     #selectorSkins {
@@ -74,6 +75,7 @@
         border: 2px solid black;
         background: white;
         cursor: pointer;
+        width: 200px;
     }
 
 </style>
@@ -84,36 +86,41 @@
 
 <div id="gameContainer">
     <div id="puntos">0</div>
-    <div id="controles">b para agacharse   r para reiniciarse</div>
+    <div id="controles">espacio para saltar   b para agacharse   r para reiniciar</div>
+
     <img id="personaje" src="chuy.png">
     <div id="suelo"></div>
 </div>
 
 <div id="selectorSkins">
-    <button class="skinBoton" onclick="cambiarSkin('chuy.png')">Chuy</button>
-    <button class="skinBoton" onclick="cambiarSkin('mangonio.png')">Mangonio</button>
+    <button class="skinBoton" id="skinButton" onclick="toggleSkin()">Chuy</button>
 </div>
 
 <script>
 let personaje = document.getElementById("personaje");
 let game = document.getElementById("gameContainer");
+let skinButton = document.getElementById("skinButton");
 
-let velocidad = 7; // personaje mas rapido
+let velocidad = 5; // personaje mas lento
 let puntaje = 0;
 let vivo = true;
 let agachado = false;
-
-// hitbox ajustada
-let hitX = 10;
-let hitY = 10;
+let saltando = false;
+let velocidadSalto = 0;
 
 let cactusList = [];
+let skins = ["chuy.png", "mangonio.png"];
+let skinIndex = 0;
 
-function cambiarSkin(skin){
-    personaje.src = skin;
+// alternar entre skins
+function toggleSkin() {
+    skinIndex = (skinIndex + 1) % skins.length;
+    personaje.src = skins[skinIndex];
+
+    skinButton.innerText = skins[skinIndex] === "chuy.png" ? "Chuy" : "Mangonio";
 }
 
-// crear cactus minimalistas
+// crear cactus
 function crearCactus() {
     if (!vivo) return;
 
@@ -121,9 +128,9 @@ function crearCactus() {
     cactus.classList.add("cactus");
     cactus.style.left = "800px";
 
-    let separacion = Math.floor(Math.random() * 200) + 200;
+    cactus.vel = 4 + (Math.random() * 2);
 
-    cactus.vel = velocidad + (Math.random() * 2);
+    let separacion = Math.floor(Math.random() * 200) + 250;
 
     game.appendChild(cactus);
     cactusList.push(cactus);
@@ -137,18 +144,29 @@ crearCactus();
 function loop() {
     if (!vivo) return;
 
-    puntaje += 0.05; // puntaje lento
+    puntaje += 0.05;
     document.getElementById("puntos").innerText = Math.floor(puntaje);
+
+    // salto
+    if (saltando) {
+        personaje.style.bottom = parseInt(personaje.style.bottom) + velocidadSalto + "px";
+        velocidadSalto -= 0.5;
+
+        if (parseInt(personaje.style.bottom) <= 60) {
+            personaje.style.bottom = "60px";
+            saltando = false;
+        }
+    }
 
     // mover cactus
     for (let c of cactusList) {
         c.style.left = (parseInt(c.style.left) - c.vel) + "px";
 
         // colision
-        let px = personaje.offsetLeft + hitX;
-        let py = personaje.offsetTop + hitY;
-        let pw = personaje.offsetWidth - hitX * 2;
-        let ph = personaje.offsetHeight - hitY * 2;
+        let px = personaje.offsetLeft + 10;
+        let py = personaje.offsetTop + 10;
+        let pw = personaje.offsetWidth - 20;
+        let ph = personaje.offsetHeight - 20;
 
         let cx = c.offsetLeft;
         let cy = c.offsetTop;
@@ -168,24 +186,35 @@ function loop() {
 
 loop();
 
-// agacharse
+// inputs
 document.addEventListener("keydown", e => {
+
+    // saltar
+    if (e.code === "Space") {
+        if (!saltando) {
+            saltando = true;
+            velocidadSalto = 10;
+        }
+    }
+
+    // agachar
     if (e.key === "b") {
         if (!agachado) {
             agachado = true;
             personaje.style.height = "35px";
-            personaje.style.bottom = "60px";
         }
     }
 
-    if (e.key === "r") reiniciar();
+    // reiniciar
+    if (e.key === "r") {
+        reiniciar();
+    }
 });
 
 document.addEventListener("keyup", e => {
     if (e.key === "b") {
         agachado = false;
         personaje.style.height = "55px";
-        personaje.style.bottom = "60px";
     }
 });
 
