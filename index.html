@@ -130,7 +130,8 @@ let player = {
     ducking: false
 };
 
-let gravity = 0.7;
+let gravity = 0.55;   // caída más suave
+let jumpForce = -11;  // salto reducido
 
 // ===== Cactus =====
 let cactusList = [];
@@ -151,7 +152,7 @@ function spawnCactus() {
         height: 70
     });
 
-    setTimeout(spawnCactus, 900 + Math.random()*900);
+    setTimeout(spawnCactus, 1100 + Math.random()*900);
 }
 
 // ===== Input =====
@@ -162,9 +163,7 @@ document.addEventListener("keydown", e => {
         jump();
     }
 
-    if (e.key.toLowerCase() === "b") {
-        duck(true);
-    }
+    if (e.key.toLowerCase() === "b") duck(true);
 
     if (e.key.toLowerCase() === "r" && !rPressed) {
         rPressed = true;
@@ -180,17 +179,15 @@ document.addEventListener("keyup", e => {
 // ===== Jump =====
 function jump() {
     if (!player.onGround) return;
-    player.dy = -15;
+
+    player.dy = jumpForce; // salto más bajo
     player.onGround = false;
 }
 
 // ===== Duck =====
 function duck(state) {
-    if (state) {
-        player.height = 50;
-    } else {
-        player.height = 80;
-    }
+    if (state) player.height = 50;
+    else player.height = 80;
 }
 
 // ===== Collision =====
@@ -210,6 +207,7 @@ let dead = false;
 function loop() {
     ctx.clearRect(0,0,900,450);
 
+    // gravedad y movimiento
     player.y += player.dy;
     player.dy += gravity;
 
@@ -221,6 +219,7 @@ function loop() {
 
     ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
 
+    // cactus
     cactusList.forEach(c => {
         c.x -= player.speed;
         drawCactus(c);
@@ -246,11 +245,17 @@ function die() {
     cactusEnabled = false;
     cactusList = [];
 
+    // aplicar tamaño muerte
+    if (currentSkin === "mangonio") {
+        player.width = 110;
+        player.height = 120;
+    } else {
+        player.width = 70;
+        player.height = 80;
+    }
+
     playerImg = new Image();
     playerImg.src = deathImg.src;
-
-    player.width = 110;
-    player.height = 120;
 
     document.getElementById("deadBox").style.display = "block";
     document.getElementById("restartBtn").style.display = "block";
