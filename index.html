@@ -162,7 +162,7 @@ function spawnCactus() {
 
         cactusList.push({
             x: 900,
-            y: 330,
+            y: 310,   // 🔥 CAMBIO: cactus más abajo
             width: 35,
             height: 70
         });
@@ -178,9 +178,12 @@ document.addEventListener("keydown", e => {
     if (e.key === " " || e.key === "ArrowUp") jump();
     if (e.key.toLowerCase() === "b") duck(true);
 
-    if (e.key.toLowerCase() === "r" && !rPressed) {
-        rPressed = true;
-        resetGame();
+    // 🔥 CAMBIO: evitar reinicios múltiples
+    if (e.key.toLowerCase() === "r") {
+        if (!rPressed) {
+            rPressed = true;
+            resetGame();
+        }
     }
 });
 
@@ -207,7 +210,7 @@ function hit(a, b) {
     return (
         a.x < b.x + b.width &&
         a.x + a.width > b.x &&
-        a.y + (a.height - 20) > b.y &&  // HITBOX MÁS ABAJO
+        a.y + (a.height - 20) > b.y &&
         a.y < b.y + b.height
     );
 }
