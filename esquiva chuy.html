@@ -1,170 +1,297 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Esquiva Chuy</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: #aeeaff;
-            font-family: Arial, sans-serif;
-        }
+  <meta charset="UTF-8" />
+  <title>Esquiva Chuy</title>
 
-        #gameCanvas {
-            background: #aeeaff;
-            display: block;
-            margin: 0 auto;
-        }
+  <style>
+    body {
+      margin: 0;
+      background: #cce7ff;
+      overflow: hidden;
+      font-family: Arial;
+    }
 
-        #skinPanel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 10px;
-            text-align: center;
-        }
+    canvas {
+      display: none;
+      margin: auto;
+      background: #b2ebf2;
+      border: 5px solid #333;
+    }
 
-        #controls {
-            position: absolute;
-            bottom: 15px;
-            right: 15px;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 10px;
-            border-radius: 12px;
-        }
-    </style>
+    #menu {
+      text-align: center;
+      margin-top: 120px;
+    }
+
+    .btn {
+      display: block;
+      width: 200px;
+      margin: 15px auto;
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      font-size: 22px;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    #easy { background: #26c955; }
+    #medium { background: #e2c313; }
+    #hard { background: #d62828; }
+
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      font-size: 20px;
+      font-weight: bold;
+      display: none;
+    }
+
+    #controls {
+      position: absolute;
+      bottom: 10px;
+      left: 20px;
+      font-size: 16px;
+      display: none;
+    }
+
+    #skinBox {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      font-size: 16px;
+      display: none;
+    }
+
+    #gameOver {
+      position: absolute;
+      top: 35%;
+      width: 100%;
+      text-align: center;
+      font-size: 2em;
+      color: red;
+      display: none;
+    }
+  </style>
 </head>
 
 <body>
 
-<canvas id="gameCanvas" width="900" height="450"></canvas>
+  <!-- MENU DE DIFICULTAD -->
+  <div id="menu">
+    <h1>Esquiva Chuy</h1>
+    <button id="easy" class="btn">Facil</button>
+    <button id="medium" class="btn">Medio</button>
+    <button id="hard" class="btn">Dificil</button>
+  </div>
 
-<div id="skinPanel">
-    <h3>Skins</h3>
-    <button onclick="selectSkin('chuy.png')">Chuy</button>
-    <button onclick="selectSkin('mangonio.png')">Mangonio</button>
-</div>
+  <!-- CANVAS -->
+  <canvas id="game" width="800" height="300"></canvas>
 
-<div id="controls">
-    Saltar = ESPACIO  
-    Agacharse = S
-</div>
+  <!-- PUNTAJE -->
+  <div id="score">Puntos: 0</div>
+
+  <!-- CONTROLES -->
+  <div id="controls">
+    B agacharse<br>
+    R reiniciar
+  </div>
+
+  <!-- SKINS -->
+  <select id="skinBox">
+    <option value="chuy.png">Chuy</option>
+    <option value="mangonio.png">Mangonio</option>
+  </select>
+
+  <!-- GAME OVER -->
+  <div id="gameOver">Haz muerto 😭<br>Presiona R para reiniciar</div>
 
 <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-    let gameRunning = true;
+const menu = document.getElementById("menu");
+const scoreBox = document.getElementById("score");
+const controls = document.getElementById("controls");
+const skinBox = document.getElementById("skinBox");
+const gameOverText = document.getElementById("gameOver");
 
-    // ---------- PLAYER ----------
-    const player = {
-        x: 50,
-        y: 320,
-        w: 80,
-        h: 80,
-        dy: 0,
-        jumping: false,
-        crouching: false,
-        img: new Image()
-    };
+let skinImg = new Image();
+let deadImg = new Image();
 
-    player.img.src = "chuy.png"; // skin por defecto
+let player, obstacles, speed, cactusRate, frame, score, gameOver;
 
-    function selectSkin(file) {
-        player.img.src = file;
-    }
+// ---------------------
+//  DIFICULTAD
+// ---------------------
+function startGame(difficulty) {
+  if (difficulty === "easy") { speed = 5; cactusRate = 140; }
+  if (difficulty === "medium") { speed = 7; cactusRate = 100; }
+  if (difficulty === "hard") { speed = 10; cactusRate = 60; }
 
-    // ---------- OBSTÁCULOS ----------
-    const obstacleImg = new Image();
-    obstacleImg.src = "cactus.png";
+  menu.style.display = "none";
+  canvas.style.display = "block";
+  scoreBox.style.display = "block";
+  controls.style.display = "block";
+  skinBox.style.display = "block";
 
-    let obstacles = [];
+  reset();
+  requestAnimationFrame(update);
+}
 
-    function spawnObstacle() {
-        obstacles.push({ x: 900, y: 330, w: 50, h: 80 });
-    }
+// ---------------------
+//  REINICIO
+// ---------------------
+function reset() {
+  skinImg.src = skinBox.value;
 
-    setInterval(spawnObstacle, 2000);
+  const deathName = skinBox.value.replace(".png", "1.png");
+  deadImg.src = deathName;
 
-    // ---------- FÍSICA ----------
-    function updatePlayer() {
-        // Saltar
-        if (player.jumping) {
-            player.dy += 1;
-            player.y += player.dy;
+  player = {
+    x: 60,
+    y: 200,
+    width: 50,
+    height: 70,
+    vy: 0,
+    gravity: 0.8,
+    jump: -12,
+    grounded: true,
+    crouching: false,
+    dead: false
+  };
 
-            if (player.y >= 320) {
-                player.y = 320;
-                player.jumping = false;
-                player.dy = 0;
-            }
-        }
+  obstacles = [];
+  frame = 0;
+  score = 0;
+  gameOver = false;
 
-        // Agacharse (solo baja, no se hace chaparro hacia arriba)
-        if (player.crouching) {
-            player.h = 50;
-        } else {
-            player.h = 80;
-        }
-    }
+  gameOverText.style.display = "none";
+  scoreBox.textContent = "Puntos: 0";
+}
 
-    // ---------- COLISIONES ----------
-    function checkCollision(a, b) {
-        return (
-            a.x < b.x + b.w &&
-            a.x + a.w > b.x &&
-            a.y < b.y + b.h &&
-            a.y + a.h > b.y
-        );
-    }
+// ---------------------
+//  DIBUJAR CACTUS
+// ---------------------
+function drawCactus(c) {
+  ctx.fillStyle = "#228B22";
+  // Tronco
+  ctx.fillRect(c.x, c.y, c.w, c.h);
 
-    // ---------- LOOP ----------
-    function gameLoop() {
-        if (!gameRunning) return;
+  // Brazos (cubitos)
+  ctx.fillRect(c.x - 12, c.y + 20, 12, 18);
+  ctx.fillRect(c.x + c.w, c.y + 20, 12, 18);
+}
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+// ---------------------
+//  LOOP PRINCIPAL
+// ---------------------
+function update() {
+  if (gameOver) return;
 
-        updatePlayer();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.drawImage(player.img, player.x, player.y, player.w, player.h);
+  // Física
+  player.vy += player.gravity;
+  player.y += player.vy;
 
-        obstacles.forEach((o, i) => {
-            o.x -= 6;
-            ctx.drawImage(obstacleImg, o.x, o.y, o.w, o.h);
+  if (player.y > 200) {
+    player.y = 200;
+    player.vy = 0;
+    player.grounded = true;
+  }
 
-            if (checkCollision(player, o)) {
-                alert("Perdiste!");
-                window.location.reload();
-            }
+  // Agacharse
+  if (player.crouching) {
+    player.height = 40;
+  } else {
+    player.height = 70;
+  }
 
-            if (o.x + o.w < 0) obstacles.splice(i, 1);
-        });
+  // Dibujar jugador
+  ctx.drawImage(
+    player.dead ? deadImg : skinImg,
+    player.x,
+    player.y - (player.crouching ? -30 : 0),
+    player.width,
+    player.height
+  );
 
-        requestAnimationFrame(gameLoop);
-    }
-
-    gameLoop();
-
-    // ---------- CONTROLES ----------
-    document.addEventListener("keydown", (e) => {
-        if (e.code === "Space" && !player.jumping) {
-            player.jumping = true;
-            player.dy = -15;
-        }
-
-        if (e.key === "s") {
-            player.crouching = true;
-        }
+  // Crear cactus
+  if (frame % cactusRate === 0) {
+    obstacles.push({
+      x: 800,
+      y: 240,
+      w: 28,
+      h: 60
     });
+  }
 
-    document.addEventListener("keyup", (e) => {
-        if (e.key === "s") {
-            player.crouching = false;
-        }
-    });
+  // Mover cactus
+  obstacles.forEach(c => {
+    c.x -= speed;
+    drawCactus(c);
+
+    // Colisión
+    if (
+      player.x < c.x + c.w &&
+      player.x + player.width > c.x &&
+      player.y + player.height > c.y
+    ) {
+      player.dead = true;
+      gameOver = true;
+      gameOverText.style.display = "block";
+    }
+  });
+
+  // Filtrar cactus fuera
+  obstacles = obstacles.filter(c => c.x + c.w > 0);
+
+  // Puntaje
+  frame++;
+  if (frame % 10 === 0) {
+    score++;
+    scoreBox.textContent = "Puntos: " + score;
+  }
+
+  requestAnimationFrame(update);
+}
+
+// ---------------------
+//  CONTROLES
+// ---------------------
+window.addEventListener("keydown", e => {
+  if (e.code === "Space" || e.code === "ArrowUp") {
+    if (player.grounded && !gameOver) {
+      player.vy = player.jump;
+      player.grounded = false;
+    }
+  }
+
+  if (e.code === "KeyB") {
+    player.crouching = true;
+  }
+
+  if (e.code === "KeyR" && gameOver) {
+    reset();
+  }
+});
+
+window.addEventListener("keyup", e => {
+  if (e.code === "KeyB") {
+    player.crouching = false;
+  }
+});
+
+// ---------------------
+//  BOTONES
+// ---------------------
+document.getElementById("easy").onclick = () => startGame("easy");
+document.getElementById("medium").onclick = () => startGame("medium");
+document.getElementById("hard").onclick = () => startGame("hard");
+
 </script>
-
 </body>
 </html>
