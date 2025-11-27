@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Esquiva Chuy</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #aeeaff;
+            font-family: Arial, sans-serif;
+        }
+
+        #gameCanvas {
+            background: #aeeaff;
+            display: block;
+            margin: 0 auto;
+        }
+
+        #skinPanel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+<canvas id="gameCanvas" width="900" height="450"></canvas>
+
+<div id="skinPanel">
+    <h3>Skins</h3>
+    <button onclick="selectSkin('chuy.png')">Chuy</button>
+    <button onclick="selectSkin('mangonio.png')">Mangonio</button>
+</div>
+
+<div id="controls">
+    Saltar = ESPACIO  
+    Agacharse = S
+</div>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let gameRunning = true;
+
+    // ---------- PLAYER ----------
+    const player = {
+        x: 50,
+        y: 320,
+        w: 80,
+        h: 80,
+        dy: 0,
+        jumping: false,
+        crouching: false,
+        img: new Image()
+    };
+
+    player.img.src = "chuy.png"; // skin por defecto
+
+    function selectSkin(file) {
+        player.img.src = file;
+    }
+
+    // ---------- OBSTÁCULOS ----------
+    const obstacleImg = new Image();
+    obstacleImg.src = "cactus.png";
+
+    let obstacles = [];
+
+    function spawnObstacle() {
+        obstacles.push({ x: 900, y: 330, w: 50, h: 80 });
+    }
+
+    setInterval(spawnObstacle, 2000);
+
+    // ---------- FÍSICA ----------
+    function updatePlayer() {
+        // Saltar
+        if (player.jumping) {
+            player.dy += 1;
+            player.y += player.dy;
+
+            if (player.y >= 320) {
+                player.y = 320;
+                player.jumping = false;
+                player.dy = 0;
+            }
+        }
+
+        // Agacharse (solo baja, no se hace chaparro hacia arriba)
+        if (player.crouching) {
+            player.h = 50;
+        } else {
+            player.h = 80;
+        }
+    }
+
+    // ---------- COLISIONES ----------
+    function checkCollision(a, b) {
+        return (
+            a.x < b.x + b.w &&
+            a.x + a.w > b.x &&
+            a.y < b.y + b.h &&
+            a.y + a.h > b.y
+        );
+    }
+
+    // ---------- LOOP ----------
+    function gameLoop() {
+        if (!gameRunning) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        updatePlayer();
+
+        ctx.drawImage(player.img, player.x, player.y, player.w, player.h);
+
+        obstacles.forEach((o, i) => {
+            o.x -= 6;
+            ctx.drawImage(obstacleImg, o.x, o.y, o.w, o.h);
+
+            if (checkCollision(player, o)) {
+                alert("Perdiste!");
+                window.location.reload();
+            }
+
+            if (o.x + o.w < 0) obstacles.splice(i, 1);
+        });
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+
+    // ---------- CONTROLES ----------
+    document.addEventListener("keydown", (e) => {
+        if (e.code === "Space" && !player.jumping) {
+            player.jumping = true;
+            player.dy = -15;
+        }
+
+        if (e.key === "s") {
+            player.crouching = true;
+        }
+    });
+
+    document.addEventListener("keyup", (e) => {
+        if (e.key === "s") {
+            player.crouching = false;
+        }
+    });
+</script>
+
+</body>
+</html>
