@@ -6,16 +6,16 @@
 <style>
     body {
         margin: 0;
-        background: #87CEEB;
+        background: #87CEEB; /* color de la página */
         overflow: hidden;
         font-family: Arial;
         user-select: none;
     }
 
     canvas {
-        background: #87CEEB;
         display: block;
         margin: 0 auto;
+        background: linear-gradient(#ffffff 0%, #ffffff 35%, #87CEFA 36%, #87CEFA 70%, #f2d397 71%, #f2d397 100%);
         border-bottom: 4px solid #3a3a3a;
     }
 
@@ -24,8 +24,8 @@
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(255,255,255,0.6);
-        padding: 12px 20px;
+        background: rgba(255,255,255,0.7);
+        padding: 10px 20px;
         border-radius: 15px;
         font-size: 20px;
         cursor: pointer;
@@ -42,7 +42,7 @@
     .btn {
         padding: 15px 40px;
         margin: 10px;
-        font-size: 26px;
+        font-size: 28px;
         border: none;
         cursor: pointer;
         border-radius: 12px;
@@ -86,7 +86,7 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// ====== IMAGENES ======
+// ===== IMAGENES =====
 let skins = ["chuy.png", "mangonio.png"];
 let deathSkins = ["chuy1.png", "mangonio1.png"];
 let skinIndex = 0;
@@ -103,7 +103,7 @@ let player = {
     y: 350,
     width: 70,
     height: 80,
-    speed: 7,
+    speed: 10, // MAS RAPIDO
     dy: 0,
     onGround: true,
     ducking: false
@@ -117,74 +117,84 @@ let score = 0;
 // ===== DIFICULTAD =====
 let difficultySpeed = {
     easy: 5,
-    medium: 7,
-    hard: 10
+    medium: 8,
+    hard: 11
 };
 
-// ====== CONTROLES ======
+// ===== CONTROLES =====
 document.addEventListener("keydown", e => {
-    if (gameOver) return;
+    if (!gameOver) {
+        if (e.key === " " || e.key === "ArrowUp") jump();
+        if (e.key === "b" || e.key === "B") duck();
+        if (e.key === "ArrowDown") duck();
+    }
 
-    if (e.key === " " || e.key === "ArrowUp") jump();
-    if (e.key === "ArrowDown") duck();
+    if (e.key === "r" || e.key === "R") restartGame();
 });
 
 document.addEventListener("keyup", e => {
-    if (e.key === "ArrowDown") {
+    if (e.key === "b" || e.key === "ArrowDown") {
         player.ducking = false;
         player.height = 80;
     }
 });
 
-// ====== SALTO ======
+// ===== SALTO =====
 function jump() {
     if (!player.onGround) return;
-    player.dy = -14;
+    player.dy = -13;
     player.onGround = false;
 }
 
-// ====== AGACHARSE ======
+// ===== AGACHARSE BIEN HECHO =====
 function duck() {
     player.ducking = true;
     player.height = 50;
+    player.y = 380; // se agacha hacia abajo, no hacia arriba
 }
 
-// ====== CREAR CACTUS DE CUBITOS ======
+// ==== CACTUS MINIMALISTA =====
 function newCactus() {
     cactus.push({
         x: canvas.width + 20,
-        y: 370,
-        width: 40,
-        height: 80
+        y: 355,
+        width: 35,
+        height: 95
     });
 }
 
-// ====== DIBUJAR CACTUS ======
 function drawCactus(c) {
-    ctx.fillStyle = "#1E8F24";
+    ctx.fillStyle = "#2ea135";
+
+    // tronco principal
     ctx.fillRect(c.x, c.y, c.width, c.height);
 
-    ctx.fillRect(c.x - 20, c.y + 30, 20, 40);
-    ctx.fillRect(c.x + 40, c.y + 20, 20, 40);
+    // brazos
+    ctx.fillRect(c.x - 15, c.y + 35, 15, 35);
+    ctx.fillRect(c.x + c.width, c.y + 25, 15, 40);
+
+    // sombra
+    ctx.fillStyle = "#1d6d25";
+    ctx.fillRect(c.x, c.y, 10, c.height);
 }
 
-// ====== COLISION ======
+// ===== COLISION =====
 function hit(a, b) {
     return (
         a.x < b.x + b.width &&
         a.x + a.width > b.x &&
-        a.y + (a.height - 20) > b.y && // hitbox mas abajo
+        a.y + (a.height - 15) > b.y && // hitbox mas abajo
         a.y < b.y + b.height
     );
 }
 
-// ====== LOOP ======
+// ===== LOOP =====
 function loop() {
     if (gameOver) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // ===== JUGADOR =====
+    // movimiento jugador
     player.y += player.dy;
     player.dy += 0.8;
 
@@ -196,24 +206,18 @@ function loop() {
 
     ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
 
-    // ===== CACTUS =====
+    // cactus
     cactus.forEach(c => {
         c.x -= cactusSpeed;
-
         drawCactus(c);
 
-        if (hit(player, c)) {
-            death();
-        }
+        if (hit(player, c)) death();
     });
 
-    // borrar cactus pasados
     cactus = cactus.filter(c => c.x > -60);
 
-    // spawnear cactus
-    if (Math.random() < 0.015) newCactus();
+    if (Math.random() < 0.014) newCactus();
 
-    // puntaje
     score++;
     ctx.fillStyle = "black";
     ctx.font = "25px Arial";
@@ -222,17 +226,19 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
-// ====== MORIR ======
+// ===== MORIR =====
 function death() {
     playerImg = deathImg;
     gameOver = true;
     document.getElementById("restartBtn").style.display = "block";
 }
 
-// ===== REINICIAR =====
-document.getElementById("restartBtn").onclick = () => {
+// ==== REINICIAR ====
+function restartGame() {
     location.reload();
-};
+}
+
+document.getElementById("restartBtn").onclick = restartGame;
 
 // ===== CAMBIAR SKIN =====
 document.getElementById("skinsBox").onclick = () => {
@@ -250,8 +256,7 @@ document.getElementById("hard").onclick = () => startGame("hard");
 
 function startGame(mode) {
     cactusSpeed = difficultySpeed[mode];
-    player.speed = cactusSpeed + 2;
-
+    player.speed = cactusSpeed + 3;
     document.getElementById("difficultyMenu").style.display = "none";
     loop();
 }
