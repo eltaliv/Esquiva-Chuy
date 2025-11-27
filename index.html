@@ -30,7 +30,8 @@
 
     canvas {
         display: block;
-        background: linear-gradient(white 60%, #e8c183 60%);
+        /* nuevo cielo azul suave y menos arena */
+        background: linear-gradient(#a7d7ff 65%, #eacb96 65%);
         margin: auto;
     }
 
@@ -136,21 +137,10 @@ let gravity = 0.7;
 let cactusList = [];
 let cactusEnabled = true;
 
-// Nuevo cactus minimalista mejorado
+// cactus minimalista recto
 function drawCactus(c) {
-    ctx.fillStyle = "#0f8f32";
-
-    // tronco
+    ctx.fillStyle = "#1fa13b";
     ctx.fillRect(c.x, c.y, c.width, c.height);
-
-    // brazos minimalistas
-    ctx.fillRect(c.x - 20, c.y + 30, 15, 40);
-    ctx.fillRect(c.x + c.width - -5, c.y + 15, 15, 50);
-
-    // borde oscuro
-    ctx.strokeStyle = "#0b6c27";
-    ctx.lineWidth = 4;
-    ctx.strokeRect(c.x, c.y, c.width, c.height);
 }
 
 function spawnCactus() {
@@ -158,19 +148,23 @@ function spawnCactus() {
 
     cactusList.push({
         x: 900,
-        y: 320,
+        y: 330,
         width: 40,
-        height: 80
+        height: 70
     });
 
-    setTimeout(spawnCactus, 700 + Math.random()*800);
+    // MENOS cactus
+    setTimeout(spawnCactus, 1200 + Math.random()*1500);
 }
 
 // ===== Input =====
 document.addEventListener("keydown", e => {
+    if (dead) return;
+
     if (e.key === " " || e.key === "ArrowUp") {
-        jump(); // ya NO cambia skin
+        jump();
     }
+
     if (e.key.toLowerCase() === "b") duck(true);
     if (e.key.toLowerCase() === "r") resetGame();
 });
@@ -181,7 +175,7 @@ document.addEventListener("keyup", e => {
 
 // ===== Jump =====
 function jump() {
-    if (!player.onGround || dead) return;
+    if (!player.onGround) return;
 
     player.dy = -15;
     player.onGround = false;
@@ -189,8 +183,6 @@ function jump() {
 
 // ===== Duck =====
 function duck(state) {
-    if (dead) return;
-
     if (state) {
         player.height = 50;
     } else {
@@ -228,7 +220,7 @@ function loop() {
 
     ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
 
-    // cactus movement
+    // cactus
     cactusList.forEach(c => {
         if (!dead) c.x -= player.speed;
 
@@ -239,7 +231,6 @@ function loop() {
 
     cactusList = cactusList.filter(c => c.x > -60);
 
-    // PUNTAJE MÁS LENTO
     if (!dead) score += 1;
 
     ctx.font = "28px Arial";
@@ -254,11 +245,13 @@ function die() {
     dead = true;
     cactusEnabled = false;
 
-    // personaje se queda quieto
-    player.dy = 0;
+    // sprite más grande al morir
+    playerImg = new Image();
+    playerImg.src = currentSkin + "1.png";
+    player.width = 90;
+    player.height = 100;
 
-    // sprite de muerte
-    playerImg = deathImg;
+    player.dy = 0;
 
     document.getElementById("deadBox").style.display = "block";
     document.getElementById("restartBtn").style.display = "block";
@@ -274,6 +267,11 @@ function resetGame() {
 
     player.y = 300;
     player.dy = 0;
+
+    // volver tamaño normal
+    player.width = 70;
+    player.height = 80;
+
     playerImg = new Image();
     playerImg.src = currentSkin + ".png";
 
@@ -283,7 +281,6 @@ function resetGame() {
     spawnCactus();
 }
 
-// restart button
 document.getElementById("restartBtn").onclick = resetGame;
 
 // ===== Skin Selector =====
