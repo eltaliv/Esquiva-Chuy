@@ -44,7 +44,8 @@
         border-radius: 8px;
     }
 
-    #skinBtn {
+    /* Nuevo botón Skins */
+    #skinsBtn {
         margin-top: 20px;
         padding: 12px 25px;
         border-radius: 12px;
@@ -52,6 +53,23 @@
         cursor: pointer;
         background: white;
         border: 2px solid black;
+    }
+
+    /* Círculos de skins */
+    .skinCircle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 3px solid black;
+        margin: 10px;
+        cursor: pointer;
+        object-fit: cover;
+        display: inline-block;
+    }
+
+    #skinsMenu {
+        display: none;
+        margin-top: 10px;
     }
 
     #restartBtn {
@@ -100,23 +118,46 @@
 
 </div>
 
-<button id="skinBtn">Chuy (click para cambiar)</button>
+<!-- Nuevo botón skins -->
+<button id="skinsBtn">Skins</button>
+
+<!-- Nuevo menú de skins -->
+<div id="skinsMenu">
+    <img src="chuy.png" id="skinChuy" class="skinCircle">
+    <img src="mangonio.png" id="skinMangonio" class="skinCircle">
+</div>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 // ===== Skins =====
-let skins = ["chuy", "mangonio"];
-let index = 0;
+let currentSkin = "chuy";
 
 let playerImg = new Image();
-playerImg.src = skins[0] + ".png";
+playerImg.src = "chuy.png";
 
 let deathImg = new Image();
-deathImg.src = skins[0] + "1.png";
+deathImg.src = "chuy1.png";
 
-let currentSkin = skins[0];
+/* Abrir/cerrar menú skins */
+document.getElementById("skinsBtn").onclick = () => {
+    let menu = document.getElementById("skinsMenu");
+    menu.style.display = (menu.style.display === "none") ? "block" : "none";
+};
+
+/* Elegir skin */
+document.getElementById("skinChuy").onclick = () => {
+    currentSkin = "chuy";
+    playerImg.src = "chuy.png";
+    deathImg.src = "chuy1.png";
+};
+
+document.getElementById("skinMangonio").onclick = () => {
+    currentSkin = "mangonio";
+    playerImg.src = "mangonio.png";
+    deathImg.src = "mangonio1.png";
+};
 
 // ===== Player =====
 let player = {
@@ -138,17 +179,15 @@ let jumpForce = -13.5;
 let cactusList = [];
 let cactusEnabled = true;
 
-// Bloqueo para evitar duplicación en spawn
 let cactusSpawnRunning = false;
 
-// Nuevo: mantener cactus al morir
-let freezeCactus = false;
-
+// ===== Draw cactus =====
 function drawCactus(c) {
     ctx.fillStyle = "#1ea132";
     ctx.fillRect(c.x, c.y, c.width, c.height);
 }
 
+// ===== Spawn cactus =====
 function spawnCactus() {
     if (!cactusEnabled || cactusSpawnRunning) return;
 
@@ -162,7 +201,7 @@ function spawnCactus() {
 
         cactusList.push({
             x: 900,
-            y: 310,   // 🔥 CAMBIO: cactus más abajo
+            y: 310,
             width: 35,
             height: 70
         });
@@ -178,7 +217,6 @@ document.addEventListener("keydown", e => {
     if (e.key === " " || e.key === "ArrowUp") jump();
     if (e.key.toLowerCase() === "b") duck(true);
 
-    // 🔥 CAMBIO: evitar reinicios múltiples
     if (e.key.toLowerCase() === "r") {
         if (!rPressed) {
             rPressed = true;
@@ -303,19 +341,6 @@ function resetGame() {
 }
 
 document.getElementById("restartBtn").onclick = resetGame;
-
-// ===== Skins =====
-document.getElementById("skinBtn").onclick = () => {
-    index = (index + 1) % skins.length;
-
-    currentSkin = skins[index];
-    playerImg.src = currentSkin + ".png";
-    deathImg.src = currentSkin + "1.png";
-
-    document.getElementById("skinBtn").textContent =
-        currentSkin.charAt(0).toUpperCase() + currentSkin.slice(1) +
-        " (click para cambiar)";
-};
 
 // ===== Start =====
 spawnCactus();
