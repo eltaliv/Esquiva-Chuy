@@ -1,233 +1,399 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-<meta charset="UTF-8" />
+<meta charset="utf-8" />
 <title>Esquiva Chuy</title>
-
 <style>
-    body {
-        background: #8cc6ff;
-        margin: 0;
-        font-family: Arial, sans-serif;
-        text-align: center;
-        user-select: none;
-    }
+  :root{
+    --page-blue: #8cc6ff;
+    --game-sky: #ffffff;
+    --game-sky-2: #eaf6ff;
+    --sand: #e4c28b;
+    --ui-bg: rgba(255,255,255,0.85);
+  }
 
-    #gameContainer {
-        width: 800px;
-        height: 300px;
-        background: white;
-        margin: 30px auto 0 auto;
-        border: 3px solid black;
-        position: relative;
-        overflow: hidden;
-    }
+  body{
+    margin:0;
+    background: var(--page-blue);
+    font-family: Arial, Helvetica, sans-serif;
+    user-select: none;
+  }
 
-    #suelo {
-        position: absolute;
-        bottom: 0;
-        width: 100%;
-        height: 60px;
-        background: #e4c28b;
-    }
+  h1{ text-align:center; margin:14px 0 6px 0; }
 
-    #personaje {
-        position: absolute;
-        bottom: 60px;
-        width: 55px;
-        height: 55px;
-        image-rendering: pixelated;
-    }
+  #gameContainer{
+    width: 800px;
+    height: 300px;
+    margin: 10px auto;
+    border: 3px solid #222;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(to bottom, var(--game-sky) 0%, var(--game-sky-2) 50%, var(--sand) 50%, var(--sand) 100%);
+  }
 
-    .cactus {
-        position: absolute;
-        bottom: 60px;
-        width: 25px;
-        height: 45px;
-        background: #4a8f3b;
-        border-radius: 6px;
-    }
+  /* suelo visual (arena) */
+  #suelo{
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    height:60px;
+    background: transparent; /* ya está la arena en el gradient */
+    pointer-events:none;
+  }
 
-    #puntos {
-        position: absolute;
-        top: 5px;
-        left: 5px;
-        font-size: 18px;
-        font-weight: bold;
-    }
+  /* personaje (imagen) */
+  #personaje{
+    position:absolute;
+    left:110px; /* distancia desde la izquierda */
+    width:56px;
+    height:56px;
+    bottom:60px; /* pies a 60px del fondo (sobre la arena) */
+    image-rendering: pixelated;
+  }
 
-    #controles {
-        position: absolute;
-        bottom: 5px;
-        left: 5px;
-        font-size: 14px;
-        font-weight: bold;
-    }
+  /* cactus dibujados como divs */
+  .cactus{
+    position:absolute;
+    width:32px;
+    height:72px;
+    bottom:60px;
+    left:0;
+    pointer-events:none;
+  }
 
-    #selectorSkins {
-        margin-top: 20px;
-    }
+  /* selector de skins centrado abajo del gameplay */
+  #skinsBox{
+    width:300px;
+    margin:12px auto 40px auto;
+    text-align:center;
+  }
+  #skinButton{
+    background: var(--ui-bg);
+    border:2px solid #2c2c2c;
+    padding:10px 18px;
+    border-radius:10px;
+    cursor:pointer;
+    font-size:18px;
+    min-width:160px;
+  }
+  #skinPreview{
+    display:inline-block;
+    width:36px;
+    height:36px;
+    vertical-align:middle;
+    margin-right:10px;
+    image-rendering:pixelated;
+    border:1px solid #999;
+    background:#fff;
+  }
 
-    .skinBoton {
-        padding: 10px 20px;
-        margin: 5px;
-        font-size: 18px;
-        border: 2px solid black;
-        background: white;
-        cursor: pointer;
-        width: 200px;
-    }
+  /* restart button */
+  #restartBtn{
+    position:absolute;
+    top:12px; right:12px;
+    padding:8px 12px;
+    background:#111; color:#fff; border-radius:8px;
+    border:none; cursor:pointer; display:none;
+  }
 
+  /* puntaje arriba izquierda dentro del gameplay */
+  #puntos{
+    position:absolute;
+    top:8px; left:10px;
+    font-weight:bold; font-size:18px;
+    background: var(--ui-bg);
+    padding:4px 8px; border-radius:6px;
+  }
+
+  /* controles abajo izquierda */
+  #controles{
+    position:absolute;
+    left:10px; bottom:8px;
+    font-size:14px;
+    background: var(--ui-bg);
+    padding:6px 8px; border-radius:6px;
+  }
+
+  /* mensaje game over */
+  #msg{
+    position:absolute;
+    left:50%; top:40%;
+    transform:translate(-50%,-50%);
+    font-size:28px; color:#c22;
+    display:none;
+    background: rgba(255,255,255,0.9);
+    padding:12px 18px; border-radius:8px; border:2px solid #a00;
+  }
 </style>
 </head>
 <body>
 
 <h1>Esquiva Chuy</h1>
 
-<div id="gameContainer">
-    <div id="puntos">0</div>
-    <div id="controles">espacio para saltar   b para agacharse   r para reiniciar</div>
+<div id="gameContainer" aria-label="Área de juego">
+  <div id="puntos">Puntaje: 0</div>
+  <div id="msg">¡Estás muerto! Presiona R para reiniciar</div>
 
-    <img id="personaje" src="chuy.png">
-    <div id="suelo"></div>
+  <img id="personaje" src="chuy.png" alt="Personaje Chuy">
+
+  <div id="suelo"></div>
+
+  <!-- restart dentro del área -->
+  <button id="restartBtn">Reiniciar</button>
+
+  <!-- Controles (abajo izquierda) -->
+  <div id="controles">Espacio = saltar · B = agacharse · R = reiniciar</div>
 </div>
 
-<div id="selectorSkins">
-    <button class="skinBoton" id="skinButton" onclick="toggleSkin()">Chuy</button>
+<!-- Selector de skins centrado abajo -->
+<div id="skinsBox">
+  <img id="skinPreview" src="chuy.png" alt="preview">
+  <button id="skinButton">Chuy (click para cambiar)</button>
 </div>
 
 <script>
-let personaje = document.getElementById("personaje");
-let game = document.getElementById("gameContainer");
-let skinButton = document.getElementById("skinButton");
+/* ---------- Variables de juego ---------- */
+const game = document.getElementById('gameContainer');
+const personajeEl = document.getElementById('personaje');
+const puntosEl = document.getElementById('puntos');
+const restartBtn = document.getElementById('restartBtn');
+const msg = document.getElementById('msg');
+const skinButton = document.getElementById('skinButton');
+const skinPreview = document.getElementById('skinPreview');
 
-let velocidad = 5; // personaje mas lento
-let puntaje = 0;
-let vivo = true;
-let agachado = false;
-let saltando = false;
-let velocidadSalto = 0;
-
-let cactusList = [];
-let skins = ["chuy.png", "mangonio.png"];
+let skins = ['chuy.png','mangonio.png'];
+let deathSkins = ['chuy1.png','mangonio1.png'];
 let skinIndex = 0;
 
-// alternar entre skins
-function toggleSkin() {
-    skinIndex = (skinIndex + 1) % skins.length;
-    personaje.src = skins[skinIndex];
+/* player physics (bottom-based) */
+let player = {
+  left: 110,
+  bottom: 60,         // distancia desde abajo (pies)
+  width: 56,
+  height: 56,
+  vy: 0,              // velocidad vertical
+  gravity: 0.7,
+  jumpPower: 12,
+  onGround: true,
+  ducking: false
+};
 
-    skinButton.innerText = skins[skinIndex] === "chuy.png" ? "Chuy" : "Mangonio";
+personajeEl.style.left = player.left + 'px';
+personajeEl.style.bottom = player.bottom + 'px';
+personajeEl.style.width = player.width + 'px';
+personajeEl.style.height = player.height + 'px';
+
+/* cactus list (objetos con x,y,w,h,vel) */
+let cactusList = [];
+let spawnTimeout = null;
+
+/* gameplay params */
+let score = 0;
+let running = true;
+let cactusBaseSpeed = 5;   // velocidad global de cactus (hace juego mas rapido)
+let spawnGapMin = 220;
+let spawnGapMax = 420;
+
+/* hitbox offset para que la colisión esté un poco más abajo */
+const hitOffsetX = 8;
+const hitOffsetY = 10;
+const hitOffsetW = 16;
+const hitOffsetH = 12;
+
+/* ---------- Funciones de control ---------- */
+function setSkin(index){
+  skinIndex = index % skins.length;
+  personajeEl.src = skins[skinIndex];
+  skinPreview.src = skins[skinIndex];
 }
 
-// crear cactus
-function crearCactus() {
-    if (!vivo) return;
-
-    let cactus = document.createElement("div");
-    cactus.classList.add("cactus");
-    cactus.style.left = "800px";
-
-    cactus.vel = 4 + (Math.random() * 2);
-
-    let separacion = Math.floor(Math.random() * 200) + 250;
-
-    game.appendChild(cactus);
-    cactusList.push(cactus);
-
-    setTimeout(crearCactus, separacion);
+function toggleSkin(){
+  setSkin((skinIndex + 1) % skins.length);
 }
 
-crearCactus();
+/* initial skin */
+setSkin(0);
 
-// loop del juego
-function loop() {
-    if (!vivo) return;
-
-    puntaje += 0.05;
-    document.getElementById("puntos").innerText = Math.floor(puntaje);
-
-    // salto
-    if (saltando) {
-        personaje.style.bottom = parseInt(personaje.style.bottom) + velocidadSalto + "px";
-        velocidadSalto -= 0.5;
-
-        if (parseInt(personaje.style.bottom) <= 60) {
-            personaje.style.bottom = "60px";
-            saltando = false;
-        }
-    }
-
-    // mover cactus
-    for (let c of cactusList) {
-        c.style.left = (parseInt(c.style.left) - c.vel) + "px";
-
-        // colision
-        let px = personaje.offsetLeft + 10;
-        let py = personaje.offsetTop + 10;
-        let pw = personaje.offsetWidth - 20;
-        let ph = personaje.offsetHeight - 20;
-
-        let cx = c.offsetLeft;
-        let cy = c.offsetTop;
-        let cw = c.offsetWidth;
-        let ch = c.offsetHeight;
-
-        if (px < cx + cw &&
-            px + pw > cx &&
-            py < cy + ch &&
-            py + ph > cy) {
-            morir();
-        }
-    }
-
-    requestAnimationFrame(loop);
+/* ---------- Spawn cactus ---------- */
+function scheduleSpawn(){
+  const gap = Math.floor(Math.random() * (spawnGapMax - spawnGapMin)) + spawnGapMin;
+  spawnTimeout = setTimeout(() => {
+    spawnCactus();
+    if (running) scheduleSpawn();
+  }, gap);
 }
 
-loop();
+function spawnCactus(){
+  // create DOM element
+  const c = document.createElement('div');
+  c.className = 'cactus';
+  c.style.left = game.clientWidth + 'px';
+  // more varied size slightly
+  const scale = (Math.random()*0.18) + 0.9;
+  c.style.width = Math.round(32*scale) + 'px';
+  c.style.height = Math.round(72*scale) + 'px';
+  game.appendChild(c);
+  cactusList.push({
+    el: c,
+    x: game.clientWidth,
+    w: parseInt(c.style.width),
+    h: parseInt(c.style.height),
+    vel: cactusBaseSpeed + (Math.random()*1.6) // small variance
+  });
+}
 
-// inputs
-document.addEventListener("keydown", e => {
+/* ---------- Input handling ---------- */
+document.addEventListener('keydown', (e) => {
+  if (!running) {
+    if (e.key.toLowerCase() === 'r') restartGame();
+    return;
+  }
 
-    // saltar
-    if (e.code === "Space") {
-        if (!saltando) {
-            saltando = true;
-            velocidadSalto = 10;
-        }
+  if (e.code === 'Space') {
+    // jump
+    if (player.onGround && !player.ducking) {
+      player.vy = player.jumpPower;
+      player.onGround = false;
     }
+  }
 
-    // agachar
-    if (e.key === "b") {
-        if (!agachado) {
-            agachado = true;
-            personaje.style.height = "35px";
-        }
+  if (e.key.toLowerCase() === 'b') {
+    // duck: shrink from the top (keep bottom fixed)
+    if (!player.ducking && player.onGround) {
+      player.ducking = true;
+      personajeEl.style.height = Math.round(player.height * 0.62) + 'px';
+      // top goes down because bottom fixed -> effect you asked
     }
+  }
 
-    // reiniciar
-    if (e.key === "r") {
-        reiniciar();
-    }
+  if (e.key.toLowerCase() === 'r') {
+    restartGame();
+  }
 });
 
-document.addEventListener("keyup", e => {
-    if (e.key === "b") {
-        agachado = false;
-        personaje.style.height = "55px";
+document.addEventListener('keyup', (e) => {
+  if (e.key.toLowerCase() === 'b') {
+    if (player.ducking) {
+      player.ducking = false;
+      personajeEl.style.height = player.height + 'px';
     }
+  }
 });
 
-// morir
-function morir() {
-    vivo = false;
+/* ---------- Collision util ---------- */
+function rectsIntersect(ax, ay, aw, ah, bx, by, bw, bh){
+  return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
 }
 
-// reiniciar
-function reiniciar() {
-    location.reload();
+/* ---------- Game loop ---------- */
+function update(){
+  if (!running) return;
+
+  // physics: apply vertical velocity to player's bottom
+  player.bottom += player.vy;
+  player.vy -= player.gravity; // gravity reduces upward velocity (since bottom increasing = up)
+  // ground check
+  const groundBottom = 60; // feet y
+  if (player.bottom <= groundBottom){
+    player.bottom = groundBottom;
+    player.vy = 0;
+    player.onGround = true;
+  } else {
+    player.onGround = false;
+  }
+
+  // set DOM
+  personajeEl.style.bottom = Math.round(player.bottom) + 'px';
+
+  // move cactus
+  for (let i = cactusList.length -1; i >=0; i--){
+    let item = cactusList[i];
+    item.x -= item.vel;
+    item.el.style.left = Math.round(item.x) + 'px';
+
+    // collision check: compute player hitbox (a bit smaller and lower)
+    const px = personajeEl.offsetLeft + hitOffsetX;
+    const py = (game.clientHeight - (player.bottom + player.height)) + hitOffsetY; 
+    // Note: offsetTop of character inside game is computed relative to viewport; easier to compute using positions:
+    // We'll compute cactus top as (game height - bottom - h)
+    const pw = player.width - hitOffsetW;
+    const ph = player.height - hitOffsetH;
+
+    const cx = item.x;
+    const cy = game.clientHeight - (item.h + 60); // y from top
+    const cw = item.w;
+    const ch = item.h;
+
+    // Convert px,py to top-based coordinates for comparison:
+    // player's top = game.clientHeight - (player.bottom + player.height)
+    const playerTop = game.clientHeight - (player.bottom + player.height);
+    const playerLeft = personajeEl.offsetLeft;
+
+    if (rectsIntersect(playerLeft + hitOffsetX, playerTop + hitOffsetY, pw, ph, cx, cy, cw, ch)) {
+      // die
+      die();
+      return;
+    }
+
+    // remove off-screen
+    if (item.x + item.w < -50){
+      item.el.remove();
+      cactusList.splice(i,1);
+    }
+  }
+
+  // score increases slowly
+  score += 0.02;
+  puntosEl.textContent = 'Puntaje: ' + Math.floor(score);
+
+  requestAnimationFrame(update);
 }
+
+/* ---------- Die / Restart ---------- */
+function die(){
+  running = false;
+  // show death sprite (load if exists), else use existing
+  const deathSrc = deathSkins[skinIndex] || deathSkins[0];
+  // Try to set image; if not found browser will show broken image — make fallback: hide image and show msg
+  personajeEl.src = deathSrc;
+  msg.style.display = 'block';
+  restartBtn.style.display = 'block';
+}
+
+restartBtn.addEventListener('click', restartGame);
+
+function restartGame(){
+  // reload page simple and safe
+  location.reload();
+}
+
+/* ---------- Start game ---------- */
+function start(){
+  // ensure initial variables
+  running = true;
+  score = 0;
+  cactusList.forEach(it=> { if(it.el && it.el.remove) it.el.remove(); });
+  cactusList = [];
+  msg.style.display = 'none';
+  restartBtn.style.display = 'none';
+  // small tuning: set moderate speed (you asked not too fast)
+  cactusBaseSpeed = 5;
+  // schedule first spawns
+  scheduleSpawn();
+  requestAnimationFrame(update);
+}
+
+/* ---------- Skin UI ---------- */
+skinButton.addEventListener('click', () => {
+  toggleSkin();
+  // update label nicely
+  skinButton.textContent = (skinIndex === 0) ? 'Chuy (click para cambiar)' : 'Mangonio (click para cambiar)';
+});
+
+/* start the game */
+start();
+
 </script>
-
 </body>
 </html>
