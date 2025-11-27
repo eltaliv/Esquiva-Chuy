@@ -126,19 +126,20 @@ let player = {
     height: 80,
     dy: 0,
     onGround: true,
-    speed: 6,          // 🔥 INICIA MÁS LENTO
-    accel: 0.004,      // 🔥 ACELERA POCO A POCO
+    speed: 6,
+    accel: 0.004,
     ducking: false
 };
 
-// 🔥 SALTO MEJORADO (más alto y más rápido)
 let gravity = 0.55;
-let jumpForce = -13.5; // SUBIDO DE -11 → -13.5 (un poco más alto)
-                       // además es más rápido al subir
+let jumpForce = -13.5;
 
 // ===== Cactus =====
 let cactusList = [];
 let cactusEnabled = true;
+
+// 🔥 Nuevo candado para evitar duplicación de spawns
+let cactusSpawnRunning = false;
 
 function drawCactus(c) {
     ctx.fillStyle = "#1ea132";
@@ -148,14 +149,24 @@ function drawCactus(c) {
 function spawnCactus() {
     if (!cactusEnabled) return;
 
-    cactusList.push({
-        x: 900,
-        y: 330,
-        width: 35,
-        height: 70
-    });
+    if (cactusSpawnRunning) return;
+    cactusSpawnRunning = true;
 
-    setTimeout(spawnCactus, 1100 + Math.random()*900);
+    (function loopSpawn() {
+        if (!cactusEnabled) {
+            cactusSpawnRunning = false;
+            return;
+        }
+
+        cactusList.push({
+            x: 900,
+            y: 330,
+            width: 35,
+            height: 70
+        });
+
+        setTimeout(loopSpawn, 1100 + Math.random() * 900);
+    })();
 }
 
 // ===== Input =====
@@ -182,7 +193,6 @@ document.addEventListener("keyup", e => {
 // ===== Jump =====
 function jump() {
     if (!player.onGround) return;
-
     player.dy = jumpForce;
     player.onGround = false;
 }
@@ -210,7 +220,6 @@ let dead = false;
 function loop() {
     ctx.clearRect(0,0,900,450);
 
-    // gravedad y movimiento
     player.y += player.dy;
     player.dy += gravity;
 
@@ -220,14 +229,10 @@ function loop() {
         player.onGround = true;
     }
 
-    // 🔥 ACELERAR VELOCIDAD POCO A POCO
-    if (!dead) {
-        player.speed += player.accel;
-    }
+    if (!dead) player.speed += player.accel;
 
     ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
 
-    // cactus
     cactusList.forEach(c => {
         c.x -= player.speed;
         drawCactus(c);
@@ -253,7 +258,6 @@ function die() {
     cactusEnabled = false;
     cactusList = [];
 
-    // tamaño muerte
     if (currentSkin === "mangonio") {
         player.width = 110;
         player.height = 120;
@@ -274,20 +278,19 @@ function resetGame() {
     dead = false;
     cactusEnabled = true;
     cactusList = [];
+    cactusSpawnRunning = false; // 🔥 IMPORTANTE
 
     score = 0;
-
     player.y = 300;
     player.dy = 0;
 
     player.width = 70;
     player.height = 80;
 
+    player.speed = 6;
+
     playerImg = new Image();
     playerImg.src = currentSkin + ".png";
-
-    // 🔥 Reinicia velocidad lenta
-    player.speed = 6;
 
     document.getElementById("deadBox").style.display = "none";
     document.getElementById("restartBtn").style.display = "none";
