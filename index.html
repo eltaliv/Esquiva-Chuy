@@ -7,7 +7,7 @@
 <style>
     body {
         margin: 0;
-        background: #87BFFF; 
+        background: #87BFFF;
         font-family: Arial, sans-serif;
         user-select: none;
         text-align: center;
@@ -30,8 +30,7 @@
 
     canvas {
         display: block;
-        /* nuevo cielo azul suave y menos arena */
-        background: linear-gradient(#a7d7ff 65%, #eacb96 65%);
+        background: linear-gradient(#A7D3FF 60%, #e8c183 60%);
         margin: auto;
     }
 
@@ -137,9 +136,8 @@ let gravity = 0.7;
 let cactusList = [];
 let cactusEnabled = true;
 
-// cactus minimalista recto
 function drawCactus(c) {
-    ctx.fillStyle = "#1fa13b";
+    ctx.fillStyle = "#1ea132";
     ctx.fillRect(c.x, c.y, c.width, c.height);
 }
 
@@ -149,34 +147,39 @@ function spawnCactus() {
     cactusList.push({
         x: 900,
         y: 330,
-        width: 40,
+        width: 35,
         height: 70
     });
 
-    // MENOS cactus
-    setTimeout(spawnCactus, 1200 + Math.random()*1500);
+    setTimeout(spawnCactus, 900 + Math.random()*900);
 }
 
 // ===== Input =====
-document.addEventListener("keydown", e => {
-    if (dead) return;
+let rPressed = false;
 
+document.addEventListener("keydown", e => {
     if (e.key === " " || e.key === "ArrowUp") {
         jump();
     }
 
-    if (e.key.toLowerCase() === "b") duck(true);
-    if (e.key.toLowerCase() === "r") resetGame();
+    if (e.key.toLowerCase() === "b") {
+        duck(true);
+    }
+
+    if (e.key.toLowerCase() === "r" && !rPressed) {
+        rPressed = true;
+        resetGame();
+    }
 });
 
 document.addEventListener("keyup", e => {
     if (e.key.toLowerCase() === "b") duck(false);
+    if (e.key.toLowerCase() === "r") rPressed = false;
 });
 
 // ===== Jump =====
 function jump() {
     if (!player.onGround) return;
-
     player.dy = -15;
     player.onGround = false;
 }
@@ -195,7 +198,7 @@ function hit(a, b) {
     return (
         a.x < b.x + b.width &&
         a.x + a.width > b.x &&
-        a.y + (a.height - 20) > b.y &&
+        a.y + (a.height - 10) > b.y &&
         a.y < b.y + b.height
     );
 }
@@ -207,10 +210,8 @@ let dead = false;
 function loop() {
     ctx.clearRect(0,0,900,450);
 
-    if (!dead) {
-        player.y += player.dy;
-        player.dy += gravity;
-    }
+    player.y += player.dy;
+    player.dy += gravity;
 
     if (player.y > 300) {
         player.y = 300;
@@ -220,13 +221,10 @@ function loop() {
 
     ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
 
-    // cactus
     cactusList.forEach(c => {
-        if (!dead) c.x -= player.speed;
-
+        c.x -= player.speed;
         drawCactus(c);
-
-        if (!dead && hit(player, c)) die();
+        if (hit(player, c)) die();
     });
 
     cactusList = cactusList.filter(c => c.x > -60);
@@ -242,16 +240,17 @@ function loop() {
 
 // ===== Death =====
 function die() {
+    if (dead) return;
+
     dead = true;
     cactusEnabled = false;
+    cactusList = [];
 
-    // sprite más grande al morir
     playerImg = new Image();
-    playerImg.src = currentSkin + "1.png";
-    player.width = 90;
-    player.height = 100;
+    playerImg.src = deathImg.src;
 
-    player.dy = 0;
+    player.width = 110;
+    player.height = 120;
 
     document.getElementById("deadBox").style.display = "block";
     document.getElementById("restartBtn").style.display = "block";
@@ -259,16 +258,15 @@ function die() {
 
 // ===== Reset =====
 function resetGame() {
-    cactusList = [];
-    cactusEnabled = true;
     dead = false;
+    cactusEnabled = true;
+    cactusList = [];
 
     score = 0;
 
     player.y = 300;
     player.dy = 0;
 
-    // volver tamaño normal
     player.width = 70;
     player.height = 80;
 
@@ -281,6 +279,7 @@ function resetGame() {
     spawnCactus();
 }
 
+// botón reinicio
 document.getElementById("restartBtn").onclick = resetGame;
 
 // ===== Skin Selector =====
@@ -296,7 +295,7 @@ document.getElementById("skinBtn").onclick = () => {
         " (click para cambiar)";
 };
 
-// ===== Start Game =====
+// ===== Start =====
 spawnCactus();
 loop();
 </script>
